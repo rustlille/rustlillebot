@@ -1,51 +1,56 @@
-use discord::{
-    model::{ChannelId, Event, UserId},
-    ChannelRef, Discord, State,
-};
+use anyhow::anyhow;
+use serenity::async_trait;
+use serenity::model::channel::Message;
+use serenity::model::gateway::Ready;
+use serenity::prelude::*;
+use shuttle_secrets::SecretStore;
+use tracing::info;
 
-use anyhow::{anyhow, bail, Result as AnyResult};
+struct Bot;
 
-fn main() {
-    loop {
-        dbg!(run_bot(include_str!("../config")));
+#[async_trait]
+impl EventHandler for Bot {
+    async fn message(&self, ctx: Context, message: Message) {
+        if message.content.contains("https://x.com/") {
+            if let Err(e) = message
+                .channel_id
+                .say(
+                    &ctx.http,
+                    message
+                        .content
+                        .replace("https://x.com/", "https://vxtwitter.com/")
+                        .as_str(),
+                )
+                .await
+            {
+                info!("couldn't send message: {:?}", e);
+            };
+        }
+    }
+
+    async fn ready(&self, _: Context, ready: Ready) {
+        info!("{} is connected!", ready.user.name);
     }
 }
 
-fn run_bot(api_key: &str) -> AnyResult<()> {
-    // 274877926400
-    // Log in to Discord using a bot token from the environment
-    let discord = Discord::from_bot_token(api_key).map_err(|_| anyhow!("login failed"))?;
+#[shuttle_runtime::main]
+async fn serenity(
+    #[shuttle_secrets::Secrets] secret_store: SecretStore,
+) -> shuttle_serenity::ShuttleSerenity {
+    // Get the discord token set in `Secrets.toml`
+    let token = if let Some(token) = secret_store.get("DISCORD_TOKEN") {
+        token
+    } else {
+        return Err(anyhow!("'DISCORD_TOKEN' was not found").into());
+    };
 
-    // Establish the websocket connection
-    let (mut connection, ready) = discord.connect().map_err(|_| anyhow!("connect failed"))?;
-    let mut state = State::new(ready);
+    // Set gateway intents, which decides what events the bot will be notified about
+    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
 
-    loop {
-        // Receive an event and update the state with it
-        let event = connection
-            .recv_event()
-            .map_err(|e| anyhow!("something happened {:?}", e))?;
-        state.update(&event);
+    let client = Client::builder(&token, intents)
+        .event_handler(Bot)
+        .await
+        .expect("Err creating client");
 
-        // Log messages
-        if let Event::MessageCreate(message) = event {
-            if let Some(ChannelRef::Public(server, channel)) =
-                state.find_channel(message.channel_id)
-            {
-                if message.content.contains("https://x.com/") {
-                    let _ = discord.send_message_ex(message.channel_id, |b| {
-                        b.content(
-                            message
-                                .content
-                                .replace("https://x.com/", "https://vxtwitter.com/")
-                                .as_str(),
-                        )
-                        .nonce("")
-                        .tts(false)
-                        .reply(message.id, false)
-                    });
-                }
-            }
-        }
-    }
+    Ok(client.into())
 }
