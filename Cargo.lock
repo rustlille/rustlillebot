@@ -1474,6 +1474,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
+name = "rustlillebot"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serenity",
+ "shuttle-runtime",
+ "shuttle-secrets",
+ "shuttle-serenity",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "rustls"
 version = "0.20.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2514,19 +2527,6 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
-
-[[package]]
-name = "vxx-rs"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serenity",
- "shuttle-runtime",
- "shuttle-secrets",
- "shuttle-serenity",
- "tokio",
- "tracing",
-]
 
 [[package]]
 name = "want"
